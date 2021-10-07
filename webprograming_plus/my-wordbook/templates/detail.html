@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Sparta Vocabulary Notebook</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+          crossorigin="anonymous">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href='{{ url_for("static", filename="mystyle.css") }}' rel="stylesheet">
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+            integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+            integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+            crossorigin="anonymous"></script>
+
+
+    <script>
+        let word = '{{ word }}'
+        $(document).ready(function () {
+            //get_definitions()
+        })
+
+        function get_definitions() {
+            $.ajax({
+                type: "GET",
+                url: `https://owlbot.info/api/v4/dictionary/${word}`,
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("Authorization", "Token 865ffe70f9401b95e6e8c92e13a45404717abd3c");
+                },
+                data: {},
+                error: function (xhr, status, error) {
+                    alert("에러 발생!");
+                },
+                success: function (response) {
+                    console.log(response)
+                    $('#word').text(response["word"])
+                    if (response["pronunciation"] == null) {
+                        $("#pronunciation").text("")
+                    } else {
+                        $("#pronunciation").text(`/${response["pronunciation"]}/`)
+                    }
+                    $("#definitions").empty()
+                    let definitions = response["definitions"]
+
+                    for (let i = 0; i < definitions.length; i++) {
+                        let definition = definitions[i]
+                        let html_temp = ""
+                        if (definition["example"] == null) {
+                            html_temp = `<div style="padding:10px">
+                                            <i>${definition["type"]}</i>
+                                            <br>${definition["definition"]}<br>
+                                        </div>`
+                        } else {
+                            html_temp = `<div style="padding:10px">
+}
+                                            <i>${definition["type"]}</i>
+                                            <br>${definition["definition"]}<br>
+                                            <span class="example">${definition["example"]}</span>
+                                        </div>`
+                        }
+                        $("#definitions").append(html_temp)
+                    }
+                }
+            })
+        }
+
+        function save_word() {
+            $.ajax({
+                type: "POST",
+                url: `/api/save_word`,
+                data: {
+                    word_give: "{{ word }}",
+                    definition_give: "{{ result.definitions[0].definition }}"
+                },
+                success: function (response) {
+                    alert(response["msg"])
+                    window.location.href = "/detail/{{ word }}?status_give=old"
+                }
+            });
+        }
+
+        function delete_word() {
+            $.ajax({
+                type: "POST",
+                url: `/api/delete_word`,
+                data: {word_give: "{{ word }}"},
+                success: function (response) {
+                    alert(response["msg"])
+                    window.location.href = "/"
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+<div class="wrap">
+    <div class="banner" onclick="window.location.href = '/'">
+    </div>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-end">
+            <div>
+                <h1 id="word" style="display: inline;">{{ result.word }}</h1>
+                {{% if result.pronunciation %}}
+                <h5 id="pronunciation" style="display: inline;">/{{ result.pronunciation }}/</h5>
+            </div>
+            {% if status=="new" %}
+            <button onclick="save_word()" id="btn-save" class="btn btn-outline-sparta btn-lg">
+                <i class="fa fa-floppy-o" aria-hidden="true"></i>
+            </button>
+            {% else %}
+            <button onclick="delete_word()" id="btn-delete" class="btn btn-sparta btn-lg">
+                <i class="fa fa-trash" aria-hidden="true"></i>
+            </button>
+        </div>
+        <hr>
+        <div id="definitions">
+            {% for definition in result.definitions %}
+            <div style="padding:10px">
+                <i>{{ definition.type }}</i>
+                <br>{{ definition.definiton.encode('ascii','ignore').decode('utf-8') }}<br>
+
+                {{% if definition.example %}}
+                <span class="example">{{ definition.example.encode('ascii','ignore').decode('utf-8')|safe }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
